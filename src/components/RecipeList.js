@@ -4,18 +4,47 @@ import '../styles/RecipeList.css';
 
 const ITEMS_PER_PAGE = 10;
 
-const RecipeList = ({ recipes, ingredients, onEditRecipe, setRecipes }) => {
+const RecipeList = ({ recipes, ingredients, onEditRecipe, onDeleteRecipe, setRecipes, selectedCategory }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategoryState, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [expandedRecipeId, setExpandedRecipeId] = useState(null);
+  const [expandedCards, setExpandedCards] = useState(new Set());
 
   const handleDeleteRecipe = (recipeId) => {
     if (window.confirm('Are you sure you want to delete this recipe?')) {
       setRecipes(prevRecipes => prevRecipes.filter(recipe => recipe.id !== recipeId));
     }
+  };
+
+  const formatCurrency = (value) => {
+    if (value >= 100000) {
+      return `₹${(value / 100000).toFixed(2)}L`;
+    }
+    return `₹${value.toFixed(2)}`;
+  };
+
+  const convertToLakhs = (value) => {
+    const inLakhs = value / 100000;
+    return `₹${inLakhs.toFixed(2)}L`;
+  };
+
+  const formatProfitMargin = (cost, price) => {
+    const margin = ((price - cost) / price) * 100;
+    return `${margin.toFixed(1)}%`;
+  };
+
+  const toggleCard = (id) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   // Filter and sort recipes
@@ -24,15 +53,15 @@ const RecipeList = ({ recipes, ingredients, onEditRecipe, setRecipes }) => {
       .filter(recipe => {
         const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             recipe.description.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'all' || recipe.category === selectedCategory;
+        const matchesCategory = selectedCategoryState === 'all' || recipe.category === selectedCategoryState;
         return matchesSearch && matchesCategory;
       })
       .sort((a, b) => {
         let compareA, compareB;
         switch (sortBy) {
           case 'profitMargin':
-            compareA = a.profitMargin;
-            compareB = b.profitMargin;
+            compareA = ((a.sellingPrice - a.totalCost) / a.sellingPrice) * 100;
+            compareB = ((b.sellingPrice - b.totalCost) / b.sellingPrice) * 100;
             break;
           case 'monthlySales':
             compareA = a.averageMonthlySales;
@@ -46,7 +75,7 @@ const RecipeList = ({ recipes, ingredients, onEditRecipe, setRecipes }) => {
           ? compareA > compareB ? 1 : -1
           : compareA < compareB ? 1 : -1;
       });
-  }, [recipes, searchTerm, selectedCategory, sortBy, sortOrder]);
+  }, [recipes, searchTerm, selectedCategoryState, sortBy, sortOrder]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE);
@@ -66,11 +95,7 @@ const RecipeList = ({ recipes, ingredients, onEditRecipe, setRecipes }) => {
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    setExpandedRecipeId(null);
-  };
-
-  const toggleRecipeExpansion = (recipeId) => {
-    setExpandedRecipeId(expandedRecipeId === recipeId ? null : recipeId);
+    setExpandedCards(new Set());
   };
 
   if (recipes.length === 0) {
@@ -98,7 +123,7 @@ const RecipeList = ({ recipes, ingredients, onEditRecipe, setRecipes }) => {
         />
         
         <select
-          value={selectedCategory}
+          value={selectedCategoryState}
           onChange={(e) => {
             setSelectedCategory(e.target.value);
             setCurrentPage(1);
@@ -122,7 +147,7 @@ const RecipeList = ({ recipes, ingredients, onEditRecipe, setRecipes }) => {
             onClick={() => handleSort('profitMargin')}
             className={`sort-button ${sortBy === 'profitMargin' ? 'active' : ''}`}
           >
-            Profit Margin {sortBy === 'profitMargin' && (sortOrder === 'asc' ? '↑' : '↓')}
+            Gross Profit Margin {sortBy === 'profitMargin' && (sortOrder === 'asc' ? '↑' : '↓')}
           </button>
           <button 
             onClick={() => handleSort('monthlySales')}
@@ -138,47 +163,82 @@ const RecipeList = ({ recipes, ingredients, onEditRecipe, setRecipes }) => {
       </div>
 
       <div className="recipe-grid">
-        {paginatedRecipes.map(recipe => (
-          <div key={recipe.id} className="recipe-card">
-            <div className="recipe-header">
-              <h3>{recipe.name}</h3>
-              <span className="recipe-category">{recipe.category}</span>
-            </div>
-            
-            <div className="recipe-metrics">
-              <div>Profit Margin: {recipe.profitMargin.toFixed(1)}%</div>
-              <div>Monthly Sales: {recipe.averageMonthlySales}</div>
-            </div>
+        {paginatedRecipes.map(recipe => {
+          const isExpanded = expandedCards.has(recipe.id);
+          const totalCost = recipe.ingredients.reduce((sum, ing) => sum + (ing.cost * ing.quantity), 0);
+          const profitMargin = ((recipe.sellingPrice - totalCost) / recipe.sellingPrice) * 100;
 
-            <div className="recipe-actions">
-              <button onClick={() => toggleRecipeExpansion(recipe.id)}>
-                {expandedRecipeId === recipe.id ? 'Show Less' : 'Show More'}
-              </button>
-              <button onClick={() => onEditRecipe(recipe)}>Edit</button>
-              <button onClick={() => handleDeleteRecipe(recipe.id)}>Delete</button>
-            </div>
-
-            {expandedRecipeId === recipe.id && (
-              <div className="recipe-details">
-                <p>{recipe.description}</p>
-                <h4>Ingredients:</h4>
-                <ul>
-                  {recipe.ingredients.map((ing, index) => (
-                    <li key={index}>
-                      {ing.name}: {ing.quantity} {ing.unit}
-                    </li>
-                  ))}
-                </ul>
-                <div className="financial-details">
-                  <p>Cost: ₹{recipe.totalCost.toFixed(2)}</p>
-                  <p>Price: ₹{Number(recipe.sellingPrice).toFixed(2)}</p>
-                  <p>Monthly Revenue: ₹{recipe.monthlyRevenue.toFixed(2)}</p>
-                  <p>Monthly Profit: ₹{recipe.monthlyProfit.toFixed(2)}</p>
+          return (
+            <div key={recipe.id} className="recipe-card">
+              <div className="recipe-header">
+                <h3>{recipe.name}</h3>
+                <div className="recipe-actions">
+                  <button onClick={() => onEditRecipe(recipe)} className="edit">Edit</button>
+                  <button onClick={() => onDeleteRecipe(recipe.id)} className="delete">Delete</button>
+                  <button 
+                    onClick={() => toggleCard(recipe.id)} 
+                    className={`expand ${isExpanded ? 'expanded' : ''}`}
+                  >
+                    {isExpanded ? 'Show Less' : 'Show More'}
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
-        ))}
+              
+              <p className="recipe-description">{recipe.description}</p>
+
+              {isExpanded && (
+                <div className="expanded-content">
+                  <div className="ingredients-section">
+                    <h4>Ingredients</h4>
+                    <div className="ingredients-grid">
+                      {recipe.ingredients.map((ing, index) => (
+                        <div key={index} className="ingredient-item">
+                          <span className="ingredient-name">{ing.name}</span>
+                          <span className="ingredient-quantity">{ing.quantity} {ing.unit}</span>
+                          <span className="ingredient-cost">{formatCurrency(ing.cost * ing.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="metrics-section">
+                    <h4>Financial Metrics</h4>
+                    <div className="metrics-grid">
+                      <div className="metrics-row">
+                        <div className="metric-item">
+                          <label>Cost Per Unit</label>
+                          <span className="value">{formatCurrency(recipe.totalCost)}</span>
+                        </div>
+                        <div className="metric-item">
+                          <label>Selling Price</label>
+                          <span className="value">{formatCurrency(recipe.sellingPrice)}</span>
+                        </div>
+                        <div className="metric-item">
+                          <label>Profit Margin</label>
+                          <span className="value">{formatProfitMargin(recipe.totalCost, recipe.sellingPrice)}</span>
+                        </div>
+                      </div>
+                      <div className="metrics-row">
+                        <div className="metric-item">
+                          <label>Monthly Sales</label>
+                          <span className="value">{recipe.averageMonthlySales} units</span>
+                        </div>
+                        <div className="metric-item">
+                          <label>Monthly Revenue</label>
+                          <span className="value">{convertToLakhs(recipe.monthlyRevenue)}</span>
+                        </div>
+                        <div className="metric-item highlight">
+                          <label>Monthly Profit</label>
+                          <span className="value">{convertToLakhs(recipe.monthlyProfit)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {totalPages > 1 && (
