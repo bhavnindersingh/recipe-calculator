@@ -1,119 +1,210 @@
 import React, { useState } from 'react';
 import '../styles/RecipeForm.css';
 
-const RecipeForm = ({ onSaveRecipe, availableIngredients }) => {
-  const [recipeName, setRecipeName] = useState('');
-  const [sellingPrice, setSellingPrice] = useState('');
-  const [selectedIngredients, setSelectedIngredients] = useState([{ ingredientId: '', quantity: '' }]);
+function RecipeForm({ onSaveRecipe, availableIngredients }) {
+  const [recipe, setRecipe] = useState({
+    name: '',
+    ingredients: [],
+    sellingPrice: '',
+    totalCost: 0
+  });
+  const [currentIngredient, setCurrentIngredient] = useState({
+    ingredientId: '',
+    quantity: ''
+  });
+  const [error, setError] = useState(null);
 
-  const handleAddIngredient = () => {
-    setSelectedIngredients([...selectedIngredients, { ingredientId: '', quantity: '' }]);
-  };
-
-  const handleIngredientChange = (index, field, value) => {
-    const newIngredients = [...selectedIngredients];
-    newIngredients[index][field] = value;
-    setSelectedIngredients(newIngredients);
-  };
-
-  const calculateTotalCost = () => {
-    return selectedIngredients.reduce((total, selected) => {
-      const ingredient = availableIngredients.find(i => i.id === selected.ingredientId);
-      if (ingredient && selected.quantity) {
-        return total + (parseFloat(ingredient.cost) * parseFloat(selected.quantity));
-      }
-      return total;
+  const calculateTotalCost = (ingredients) => {
+    return ingredients.reduce((total, item) => {
+      const ingredient = availableIngredients.find(i => i._id === item.ingredientId);
+      return total + (ingredient ? ingredient.cost * item.quantity : 0);
     }, 0);
   };
 
-  const handleSubmit = (e) => {
+  const handleAddIngredient = (e) => {
     e.preventDefault();
-    const recipeIngredients = selectedIngredients.map(selected => {
-      const ingredient = availableIngredients.find(i => i.id === selected.ingredientId);
-      return {
-        ...ingredient,
-        quantity: selected.quantity
-      };
+    setError(null);
+
+    if (!currentIngredient.ingredientId || !currentIngredient.quantity) {
+      setError('Please select an ingredient and specify quantity');
+      return;
+    }
+
+    const newIngredients = [...recipe.ingredients, currentIngredient];
+    const totalCost = calculateTotalCost(newIngredients);
+
+    setRecipe(prev => ({
+      ...prev,
+      ingredients: newIngredients,
+      totalCost
+    }));
+
+    setCurrentIngredient({
+      ingredientId: '',
+      quantity: ''
     });
+  };
 
-    const recipe = {
-      id: Date.now(),
-      name: recipeName,
-      ingredients: recipeIngredients,
-      totalCost: calculateTotalCost(),
-      sellingPrice,
-      timestamp: new Date().toISOString(),
-    };
+  const handleRemoveIngredient = (index) => {
+    const newIngredients = recipe.ingredients.filter((_, i) => i !== index);
+    const totalCost = calculateTotalCost(newIngredients);
 
-    onSaveRecipe(recipe);
-    setRecipeName('');
-    setSellingPrice('');
-    setSelectedIngredients([{ ingredientId: '', quantity: '' }]);
+    setRecipe(prev => ({
+      ...prev,
+      ingredients: newIngredients,
+      totalCost
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!recipe.name || recipe.ingredients.length === 0 || !recipe.sellingPrice) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      await onSaveRecipe({
+        ...recipe,
+        sellingPrice: parseFloat(recipe.sellingPrice)
+      });
+
+      // Reset form
+      setRecipe({
+        name: '',
+        ingredients: [],
+        sellingPrice: '',
+        totalCost: 0
+      });
+    } catch (err) {
+      setError('Failed to save recipe. Please try again.');
+    }
   };
 
   return (
     <div className="recipe-form">
       <h2>Create New Recipe</h2>
+
+      {error && <div className="error-message">{error}</div>}
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Recipe Name:</label>
-          <input
-            type="text"
-            value={recipeName}
-            onChange={(e) => setRecipeName(e.target.value)}
-            required
-          />
+          <label>
+            Recipe Name*:
+            <input
+              type="text"
+              value={recipe.name}
+              onChange={(e) => setRecipe({ ...recipe, name: e.target.value })}
+              placeholder="Enter recipe name"
+            />
+          </label>
         </div>
 
-        <div className="form-group">
-          <label>Selling Price (MRP):</label>
-          <input
-            type="number"
-            step="0.01"
-            value={sellingPrice}
-            onChange={(e) => setSellingPrice(e.target.value)}
-            required
-          />
-        </div>
-
-        <h3>Ingredients</h3>
-        {selectedIngredients.map((selected, index) => (
-          <div key={index} className="ingredient-row">
+        <div className="ingredients-section">
+          <h3>Add Ingredients</h3>
+          <div className="add-ingredient-form">
             <select
-              value={selected.ingredientId}
-              onChange={(e) => handleIngredientChange(index, 'ingredientId', e.target.value)}
-              required
+              value={currentIngredient.ingredientId}
+              onChange={(e) => setCurrentIngredient({
+                ...currentIngredient,
+                ingredientId: e.target.value
+              })}
             >
               <option value="">Select Ingredient</option>
-              {availableIngredients.map(ingredient => (
-                <option key={ingredient.id} value={ingredient.id}>
+              {availableIngredients.map((ingredient) => (
+                <option key={ingredient._id} value={ingredient._id}>
                   {ingredient.name} (${ingredient.cost}/{ingredient.unit})
                 </option>
               ))}
             </select>
+
             <input
               type="number"
-              step="0.01"
+              value={currentIngredient.quantity}
+              onChange={(e) => setCurrentIngredient({
+                ...currentIngredient,
+                quantity: parseFloat(e.target.value)
+              })}
               placeholder="Quantity"
-              value={selected.quantity}
-              onChange={(e) => handleIngredientChange(index, 'quantity', e.target.value)}
-              required
+              step="0.01"
+              min="0"
             />
+
+            <button
+              type="button"
+              onClick={handleAddIngredient}
+              className="add-ingredient-btn"
+            >
+              Add
+            </button>
           </div>
-        ))}
 
-        <button type="button" onClick={handleAddIngredient}>
-          Add Ingredient
-        </button>
-
-        <div className="total-cost">
-          Total Cost: ${calculateTotalCost().toFixed(2)}
+          <div className="ingredients-list">
+            <h4>Recipe Ingredients</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>Ingredient</th>
+                  <th>Quantity</th>
+                  <th>Cost</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recipe.ingredients.map((item, index) => {
+                  const ingredient = availableIngredients.find(i => i._id === item.ingredientId);
+                  return (
+                    <tr key={index}>
+                      <td>{ingredient?.name}</td>
+                      <td>{item.quantity} {ingredient?.unit}</td>
+                      <td>${(ingredient?.cost * item.quantity).toFixed(2)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIngredient(index)}
+                          className="remove-btn"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <button type="submit">Save Recipe</button>
+        <div className="form-group">
+          <label>
+            Selling Price*:
+            <input
+              type="number"
+              value={recipe.sellingPrice}
+              onChange={(e) => setRecipe({ ...recipe, sellingPrice: e.target.value })}
+              placeholder="Enter selling price"
+              step="0.01"
+              min="0"
+            />
+          </label>
+        </div>
+
+        <div className="recipe-summary">
+          <p>Total Cost: ${recipe.totalCost.toFixed(2)}</p>
+          {recipe.sellingPrice && (
+            <>
+              <p>Profit: ${(recipe.sellingPrice - recipe.totalCost).toFixed(2)}</p>
+              <p>Margin: {((recipe.sellingPrice - recipe.totalCost) / recipe.sellingPrice * 100).toFixed(1)}%</p>
+            </>
+          )}
+        </div>
+
+        <button type="submit" className="submit-button">Save Recipe</button>
       </form>
     </div>
   );
-};
+}
 
 export default RecipeForm;

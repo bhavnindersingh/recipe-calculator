@@ -1,110 +1,142 @@
 import React, { useState } from 'react';
+import { api } from '../services/api';
 import '../styles/IngredientsManager.css';
 
-const IngredientsManager = ({ onIngredientAdd, ingredients }) => {
-  const [ingredient, setIngredient] = useState({
+function IngredientsManager({ ingredients, onIngredientAdd }) {
+  const [newIngredient, setNewIngredient] = useState({
     name: '',
-    cost: '',
     unit: '',
+    cost: '',
     supplier: '',
-    minQuantity: '',
-    supplierContact: '',
-    lastUpdated: ''
+    minQuantity: ''
   });
+  const [error, setError] = useState(null);
 
-  const units = ['kg', 'g', 'l', 'ml', 'units', 'dozen'];
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewIngredient(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onIngredientAdd({
-      ...ingredient,
-      id: Date.now(),
-      lastUpdated: new Date().toISOString()
-    });
-    setIngredient({
-      name: '',
-      cost: '',
-      unit: '',
-      supplier: '',
-      minQuantity: '',
-      supplierContact: '',
-      lastUpdated: ''
-    });
+    setError(null);
+
+    // Validate inputs
+    if (!newIngredient.name || !newIngredient.unit || !newIngredient.cost) {
+      setError('Please fill in all required fields (name, unit, cost)');
+      return;
+    }
+
+    try {
+      await onIngredientAdd({
+        ...newIngredient,
+        cost: parseFloat(newIngredient.cost),
+        minQuantity: newIngredient.minQuantity ? parseFloat(newIngredient.minQuantity) : 0
+      });
+
+      // Reset form
+      setNewIngredient({
+        name: '',
+        unit: '',
+        cost: '',
+        supplier: '',
+        minQuantity: ''
+      });
+    } catch (err) {
+      setError('Failed to add ingredient. Please try again.');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await api.deleteIngredient(id);
+      // Refresh ingredients list through parent component
+      window.location.reload();
+    } catch (err) {
+      setError('Failed to delete ingredient. Please try again.');
+    }
   };
 
   return (
     <div className="ingredients-manager">
-      <h2>Ingredient Management</h2>
+      <h2>Manage Ingredients</h2>
+      
+      {error && <div className="error-message">{error}</div>}
+
       <form onSubmit={handleSubmit} className="ingredient-form">
-        <div className="form-row">
-          <div className="form-group">
-            <label>Name:</label>
+        <div className="form-group">
+          <label>
+            Name*:
             <input
               type="text"
-              value={ingredient.name}
-              onChange={(e) => setIngredient({...ingredient, name: e.target.value})}
-              required
+              name="name"
+              value={newIngredient.name}
+              onChange={handleInputChange}
+              placeholder="Ingredient name"
             />
-          </div>
-          <div className="form-group">
-            <label>Cost (per unit):</label>
+          </label>
+        </div>
+
+        <div className="form-group">
+          <label>
+            Unit*:
+            <input
+              type="text"
+              name="unit"
+              value={newIngredient.unit}
+              onChange={handleInputChange}
+              placeholder="e.g., kg, g, L"
+            />
+          </label>
+        </div>
+
+        <div className="form-group">
+          <label>
+            Cost per unit*:
             <input
               type="number"
+              name="cost"
+              value={newIngredient.cost}
+              onChange={handleInputChange}
+              placeholder="Cost per unit"
               step="0.01"
-              value={ingredient.cost}
-              onChange={(e) => setIngredient({...ingredient, cost: e.target.value})}
-              required
+              min="0"
             />
-          </div>
+          </label>
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label>Unit:</label>
-            <select
-              value={ingredient.unit}
-              onChange={(e) => setIngredient({...ingredient, unit: e.target.value})}
-              required
-            >
-              <option value="">Select Unit</option>
-              {units.map(unit => (
-                <option key={unit} value={unit}>{unit}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Minimum Quantity:</label>
+        <div className="form-group">
+          <label>
+            Supplier:
+            <input
+              type="text"
+              name="supplier"
+              value={newIngredient.supplier}
+              onChange={handleInputChange}
+              placeholder="Supplier name"
+            />
+          </label>
+        </div>
+
+        <div className="form-group">
+          <label>
+            Minimum Order Quantity:
             <input
               type="number"
-              value={ingredient.minQuantity}
-              onChange={(e) => setIngredient({...ingredient, minQuantity: e.target.value})}
-              required
+              name="minQuantity"
+              value={newIngredient.minQuantity}
+              onChange={handleInputChange}
+              placeholder="Minimum quantity"
+              step="0.01"
+              min="0"
             />
-          </div>
+          </label>
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label>Supplier:</label>
-            <input
-              type="text"
-              value={ingredient.supplier}
-              onChange={(e) => setIngredient({...ingredient, supplier: e.target.value})}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Supplier Contact:</label>
-            <input
-              type="text"
-              value={ingredient.supplierContact}
-              onChange={(e) => setIngredient({...ingredient, supplierContact: e.target.value})}
-              required
-            />
-          </div>
-        </div>
-
-        <button type="submit" className="submit-btn">Add Ingredient</button>
+        <button type="submit" className="submit-button">Add Ingredient</button>
       </form>
 
       <div className="ingredients-list">
@@ -113,22 +145,29 @@ const IngredientsManager = ({ onIngredientAdd, ingredients }) => {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Cost</th>
               <th>Unit</th>
+              <th>Cost/Unit</th>
               <th>Supplier</th>
               <th>Min Quantity</th>
-              <th>Last Updated</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {ingredients.map((ing) => (
-              <tr key={ing.id}>
-                <td>{ing.name}</td>
-                <td>${parseFloat(ing.cost).toFixed(2)}</td>
-                <td>{ing.unit}</td>
-                <td>{ing.supplier}</td>
-                <td>{ing.minQuantity} {ing.unit}</td>
-                <td>{new Date(ing.lastUpdated).toLocaleDateString()}</td>
+            {ingredients.map((ingredient) => (
+              <tr key={ingredient._id}>
+                <td>{ingredient.name}</td>
+                <td>{ingredient.unit}</td>
+                <td>${ingredient.cost.toFixed(2)}</td>
+                <td>{ingredient.supplier || '-'}</td>
+                <td>{ingredient.minQuantity || '-'}</td>
+                <td>
+                  <button 
+                    onClick={() => handleDelete(ingredient._id)}
+                    className="delete-button"
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -136,6 +175,6 @@ const IngredientsManager = ({ onIngredientAdd, ingredients }) => {
       </div>
     </div>
   );
-};
+}
 
 export default IngredientsManager;
