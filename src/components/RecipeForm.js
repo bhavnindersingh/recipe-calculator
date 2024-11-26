@@ -3,19 +3,26 @@ import { RECIPE_CATEGORIES } from '../data/sampleData';
 import '../styles/shared.css';
 import '../styles/RecipeForm.css';
 
-const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelEdit }) => {
+const RecipeForm = ({ ingredients, setRecipes, editingRecipe, onCancelEdit }) => {
   const [recipe, setRecipe] = useState({
+    id: Date.now(),
     name: '',
     description: '',
     category: '',
     ingredients: [],
     sellingPrice: '',
-    averageMonthlySales: ''
+    averageMonthlySales: '',
+    totalCost: 0,
+    profitMargin: 0,
+    monthlyRevenue: 0,
+    monthlyProfit: 0
   });
+
   const [selectedIngredient, setSelectedIngredient] = useState({
     id: '',
     quantity: ''
   });
+
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -88,8 +95,39 @@ const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelE
   };
 
   const calculateTotalCost = () => {
-    return recipe.ingredients.reduce((total, { cost, quantity }) => total + (cost * quantity), 0);
+    return recipe.ingredients.reduce((total, ingredient) => {
+      const cost = parseFloat(ingredient.costPerUnit || ingredient.cost || 0);
+      const quantity = parseFloat(ingredient.quantity || 0);
+      return total + (cost * quantity);
+    }, 0);
   };
+
+  const formatInLakhs = (value) => {
+    const inLakhs = value / 100000;
+    return `₹${inLakhs.toFixed(2)}L`;
+  };
+
+  const updateCalculations = () => {
+    const totalCost = calculateTotalCost();
+    const sellingPrice = parseFloat(recipe.sellingPrice || 0);
+    const monthlySales = parseFloat(recipe.averageMonthlySales || 0);
+    
+    const profitMargin = sellingPrice ? ((sellingPrice - totalCost) / sellingPrice) * 100 : 0;
+    const monthlyRevenue = sellingPrice * monthlySales;
+    const monthlyProfit = (sellingPrice - totalCost) * monthlySales;
+
+    setRecipe(prev => ({
+      ...prev,
+      totalCost,
+      profitMargin,
+      monthlyRevenue,
+      monthlyProfit
+    }));
+  };
+
+  useEffect(() => {
+    updateCalculations();
+  }, [recipe.ingredients, recipe.sellingPrice, recipe.averageMonthlySales, updateCalculations]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -119,53 +157,31 @@ const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelE
       return;
     }
 
-    const totalCost = calculateTotalCost();
-    const sellingPrice = Number(recipe.sellingPrice);
-    const averageMonthlySales = Number(recipe.averageMonthlySales);
-    const profit = sellingPrice - totalCost;
-    const profitMargin = (profit / sellingPrice) * 100;
-    const monthlyRevenue = sellingPrice * averageMonthlySales;
-    const monthlyProfit = profit * averageMonthlySales;
-
     const updatedRecipe = {
       ...recipe,
       id: editingRecipe ? editingRecipe.id : Date.now(),
-      totalCost,
-      profit,
-      profitMargin,
-      monthlyRevenue,
-      monthlyProfit
     };
 
-    setRecipes(prevRecipes => {
-      if (editingRecipe) {
-        return prevRecipes.map(recipe => recipe.id === editingRecipe.id ? updatedRecipe : recipe);
-      } else {
-        return [...prevRecipes, updatedRecipe];
-      }
-    });
+    setRecipes(updatedRecipe);
 
     if (!editingRecipe) {
       setRecipe({
+        id: Date.now(),
         name: '',
         description: '',
         category: '',
         ingredients: [],
         sellingPrice: '',
-        averageMonthlySales: ''
+        averageMonthlySales: '',
+        totalCost: 0,
+        profitMargin: 0,
+        monthlyRevenue: 0,
+        monthlyProfit: 0
       });
     }
 
     setError('');
   };
-
-  const totalCost = calculateTotalCost();
-  const profit = recipe.sellingPrice ? Number(recipe.sellingPrice) - totalCost : 0;
-  const profitMargin = recipe.sellingPrice ? (profit / Number(recipe.sellingPrice)) * 100 : 0;
-  const monthlyRevenue = recipe.sellingPrice && recipe.averageMonthlySales 
-    ? Number(recipe.sellingPrice) * Number(recipe.averageMonthlySales) 
-    : 0;
-  const monthlyProfit = profit * (recipe.averageMonthlySales ? Number(recipe.averageMonthlySales) : 0);
 
   return (
     <div className="recipe-form">
@@ -181,6 +197,8 @@ const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelE
           </button>
         )}
       </div>
+
+      {error && <div className="error-message mb-4">{error}</div>}
 
       <form onSubmit={handleSubmit} className="neo-card mb-4">
         <div className="form-grid">
@@ -201,10 +219,10 @@ const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelE
             <label className="form-label" htmlFor="category">Category</label>
             <select
               id="category"
+              name="category"
+              className="form-input form-select"
               value={recipe.category}
               onChange={handleInputChange}
-              className="form-input form-select"
-              name="category"
             >
               <option value="">Select a category</option>
               {RECIPE_CATEGORIES.map((category) => (
@@ -260,8 +278,8 @@ const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelE
                 value={selectedIngredient.quantity}
                 onChange={handleIngredientSelect}
                 placeholder="Enter quantity"
-                step="0.01"
                 min="0"
+                step="0.1"
               />
             </div>
 
@@ -269,52 +287,39 @@ const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelE
               <label className="form-label">&nbsp;</label>
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-primary"
                 onClick={addIngredientToRecipe}
               >
-                Add to Recipe
+                Add Ingredient
               </button>
             </div>
           </div>
 
           {recipe.ingredients.length > 0 && (
-            <div className="table-container mt-4">
-              <table className="modern-table">
-                <thead>
-                  <tr>
-                    <th>Ingredient</th>
-                    <th>Quantity</th>
-                    <th>Unit Cost</th>
-                    <th>Total</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recipe.ingredients.map(ingredient => (
-                    <tr key={ingredient.id}>
-                      <td>{ingredient.name}</td>
-                      <td>{ingredient.quantity} {ingredient.unit}</td>
-                      <td>₹{ingredient.cost}</td>
-                      <td>₹{(ingredient.cost * ingredient.quantity).toFixed(2)}</td>
-                      <td>
-                        <button
-                          type="button"
-                          onClick={() => removeIngredient(ingredient.id)}
-                          className="btn btn-danger"
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="ingredients-list mt-4">
+              <h4 className="mb-3">Added Ingredients</h4>
+              <div className="ingredients-grid">
+                {recipe.ingredients.map((ing, index) => (
+                  <div key={index} className="ingredient-item">
+                    <span className="ingredient-name">{ing.name}</span>
+                    <span className="ingredient-quantity">{ing.quantity} {ing.unit}</span>
+                    <span className="ingredient-cost">₹{(ing.cost * ing.quantity).toFixed(2)}</span>
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() => removeIngredient(ing.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         <div className="pricing-section glass-card mb-4">
-          <h3 className="mb-3">Pricing & Sales Analysis</h3>
+          <h3 className="mb-3">Pricing</h3>
           <div className="form-grid">
             <div className="form-group">
               <label className="form-label" htmlFor="sellingPrice">Selling Price (₹)</label>
@@ -326,13 +331,13 @@ const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelE
                 value={recipe.sellingPrice}
                 onChange={handleInputChange}
                 placeholder="Enter selling price"
-                step="0.01"
                 min="0"
+                step="0.01"
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="averageMonthlySales">Average Monthly Sales</label>
+              <label className="form-label" htmlFor="averageMonthlySales">Average Monthly Sales (units)</label>
               <input
                 type="number"
                 id="averageMonthlySales"
@@ -344,43 +349,35 @@ const RecipeForm = ({ ingredients, recipes, setRecipes, editingRecipe, onCancelE
                 min="0"
               />
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">Total Cost</label>
-              <div className="form-static">₹{totalCost.toFixed(2)}</div>
+          <div className="metrics-display">
+            <div className="metric">
+              <label>Total Cost:</label>
+              <span>₹{recipe.totalCost?.toFixed(2) || '0.00'}</span>
             </div>
-
-            <div className="form-group">
-              <label className="form-label">Profit per Unit</label>
-              <div className="form-static">₹{profit.toFixed(2)}</div>
+            <div className="metric">
+              <label>Profit Margin:</label>
+              <span>{recipe.profitMargin?.toFixed(1) || '0'}%</span>
             </div>
-
-            <div className="form-group">
-              <label className="form-label">Profit Margin</label>
-              <div className="form-static">{profitMargin.toFixed(1)}%</div>
+            <div className="metric">
+              <label>Monthly Revenue:</label>
+              <span>{formatInLakhs(recipe.monthlyRevenue || 0)}</span>
             </div>
-
-            <div className="form-group">
-              <label className="form-label">Monthly Revenue</label>
-              <div className="form-static">₹{monthlyRevenue.toFixed(2)}</div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Monthly Profit</label>
-              <div className="form-static">₹{monthlyProfit.toFixed(2)}</div>
+            <div className="metric">
+              <label>Gross Profit:</label>
+              <span>{formatInLakhs(recipe.monthlyProfit || 0)}</span>
             </div>
           </div>
         </div>
-
-        {error && <p className="error-message text-error mb-3">{error}</p>}
 
         <div className="form-actions">
           <button type="submit" className="btn btn-primary">
             {editingRecipe ? 'Update Recipe' : 'Create Recipe'}
           </button>
           {editingRecipe && (
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="btn btn-secondary"
               onClick={onCancelEdit}
             >
