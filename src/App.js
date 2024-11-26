@@ -1,74 +1,112 @@
 import React, { useState } from 'react';
-import './App.css';
 import IngredientsManager from './components/IngredientsManager';
 import RecipeForm from './components/RecipeForm';
 import RecipeList from './components/RecipeList';
-import ProfitabilityAnalysis from './components/ProfitabilityAnalysis';
 import { sampleIngredients, sampleRecipes } from './data/sampleData';
+import './styles/shared.css';
+import './styles/App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('ingredients');
   const [ingredients, setIngredients] = useState(sampleIngredients);
   const [recipes, setRecipes] = useState(sampleRecipes);
+  const [activeTab, setActiveTab] = useState('ingredients');
+  const [editingRecipe, setEditingRecipe] = useState(null);
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
+  const handleEditRecipe = (recipe) => {
+    setEditingRecipe(recipe);
+    setActiveTab('create');
+  };
+
+  const handleUpdateRecipe = (updatedRecipe) => {
+    setRecipes(prevRecipes => 
+      prevRecipes.map(recipe => 
+        recipe.id === updatedRecipe.id ? updatedRecipe : recipe
+      )
+    );
+    setEditingRecipe(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRecipe(null);
+    setActiveTab('recipes');
   };
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Conscious Cafe Recipe Calculator & MRP Analysis</h1>
-        <div className="tab-container">
-          <button
-            className={`tab-button ${activeTab === 'ingredients' ? 'active' : ''}`}
-            onClick={() => handleTabChange('ingredients')}
-          >
-            Ingredients
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'recipes' ? 'active' : ''}`}
-            onClick={() => handleTabChange('recipes')}
-          >
-            Recipes
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
-            onClick={() => handleTabChange('analysis')}
-          >
-            Profitability Analysis
-          </button>
+    <div className="app-container">
+      <header className="glass-card mb-4">
+        <div className="header-content">
+          <h1>Conscious Cafe Recipe Calculator</h1>
+          <p className="text-secondary">Manage your recipes and track costs efficiently</p>
         </div>
       </header>
 
-      <main className="app-content">
+      <nav className="glass-card mb-4">
+        <div className="nav-tabs">
+          <button 
+            className={`btn ${activeTab === 'ingredients' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('ingredients')}
+          >
+            Ingredients
+          </button>
+          <button 
+            className={`btn ${activeTab === 'recipes' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('recipes')}
+          >
+            Recipes
+          </button>
+          <button 
+            className={`btn ${activeTab === 'create' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => {
+              setEditingRecipe(null);
+              setActiveTab('create');
+            }}
+          >
+            {editingRecipe ? 'Editing Recipe' : 'Create Recipe'}
+          </button>
+        </div>
+      </nav>
+
+      <main className="main-content">
         {activeTab === 'ingredients' && (
-          <IngredientsManager 
-            ingredients={ingredients}
-            setIngredients={setIngredients}
-          />
+          <section className="glass-card fade-in">
+            <IngredientsManager 
+              ingredients={ingredients} 
+              setIngredients={setIngredients} 
+            />
+          </section>
         )}
+
         {activeTab === 'recipes' && (
-          <div className="recipes-container">
-            <RecipeForm
+          <section className="glass-card fade-in">
+            <RecipeList 
+              recipes={recipes} 
               ingredients={ingredients}
-              recipes={recipes}
+              onEditRecipe={handleEditRecipe}
               setRecipes={setRecipes}
             />
-            <RecipeList
-              recipes={recipes}
-              setRecipes={setRecipes}
-              ingredients={ingredients}
-            />
-          </div>
+          </section>
         )}
-        {activeTab === 'analysis' && (
-          <ProfitabilityAnalysis
-            recipes={recipes}
-            ingredients={ingredients}
-          />
+
+        {activeTab === 'create' && (
+          <section className="glass-card fade-in">
+            <RecipeForm 
+              ingredients={ingredients}
+              recipes={recipes}
+              setRecipes={editingRecipe ? handleUpdateRecipe : setRecipes}
+              editingRecipe={editingRecipe}
+              onCancelEdit={handleCancelEdit}
+            />
+          </section>
         )}
       </main>
+
+      <footer className="glass-card mt-4">
+        <div className="footer-content">
+          <p className="text-secondary text-center">
+            {new Date().getFullYear()} Kavas Conscious Living LLP. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

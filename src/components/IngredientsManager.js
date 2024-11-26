@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { api } from '../services/api';
+import '../styles/shared.css';
 import '../styles/IngredientsManager.css';
 
-function IngredientsManager({ ingredients, onIngredientAdd }) {
+const IngredientsManager = ({ ingredients, setIngredients }) => {
   const [newIngredient, setNewIngredient] = useState({
     name: '',
     unit: '',
     cost: '',
-    supplier: '',
-    minQuantity: ''
+    supplier: ''
   });
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -18,163 +17,159 @@ function IngredientsManager({ ingredients, onIngredientAdd }) {
       ...prev,
       [name]: value
     }));
+    setError('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
+  const validateIngredient = () => {
+    if (!newIngredient.name.trim()) return 'Name is required';
+    if (!newIngredient.unit.trim()) return 'Unit is required';
+    if (!newIngredient.cost || isNaN(newIngredient.cost) || Number(newIngredient.cost) <= 0) {
+      return 'Cost must be a positive number';
+    }
+    return '';
+  };
 
-    // Validate inputs
-    if (!newIngredient.name || !newIngredient.unit || !newIngredient.cost) {
-      setError('Please fill in all required fields (name, unit, cost)');
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const validationError = validateIngredient();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    try {
-      await onIngredientAdd({
-        ...newIngredient,
-        cost: parseFloat(newIngredient.cost),
-        minQuantity: newIngredient.minQuantity ? parseFloat(newIngredient.minQuantity) : 0
-      });
+    const newIngredientWithId = {
+      ...newIngredient,
+      id: Date.now(),
+      cost: Number(newIngredient.cost)
+    };
 
-      // Reset form
-      setNewIngredient({
-        name: '',
-        unit: '',
-        cost: '',
-        supplier: '',
-        minQuantity: ''
-      });
-    } catch (err) {
-      setError('Failed to add ingredient. Please try again.');
-    }
+    setIngredients(prev => [...prev, newIngredientWithId]);
+    setNewIngredient({
+      name: '',
+      unit: '',
+      cost: '',
+      supplier: ''
+    });
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await api.deleteIngredient(id);
-      // Refresh ingredients list through parent component
-      window.location.reload();
-    } catch (err) {
-      setError('Failed to delete ingredient. Please try again.');
-    }
+  const handleDelete = (id) => {
+    setIngredients(prev => prev.filter(ingredient => ingredient.id !== id));
   };
 
   return (
     <div className="ingredients-manager">
-      <h2>Manage Ingredients</h2>
+      <h2 className="mb-4">Manage Ingredients</h2>
       
-      {error && <div className="error-message">{error}</div>}
-
-      <form onSubmit={handleSubmit} className="ingredient-form">
-        <div className="form-group">
-          <label>
-            Name*:
+      <form onSubmit={handleSubmit} className="neo-card mb-4">
+        <div className="form-grid">
+          <div className="form-group">
+            <label className="form-label" htmlFor="name">Name</label>
             <input
               type="text"
+              id="name"
               name="name"
+              className="form-input"
               value={newIngredient.name}
               onChange={handleInputChange}
-              placeholder="Ingredient name"
+              placeholder="Enter ingredient name"
             />
-          </label>
-        </div>
+          </div>
 
-        <div className="form-group">
-          <label>
-            Unit*:
-            <input
-              type="text"
+          <div className="form-group">
+            <label className="form-label" htmlFor="unit">Unit</label>
+            <select
+              id="unit"
               name="unit"
+              className="form-input form-select"
               value={newIngredient.unit}
               onChange={handleInputChange}
-              placeholder="e.g., kg, g, L"
-            />
-          </label>
-        </div>
+            >
+              <option value="">Select unit</option>
+              <option value="kg">Kilogram (kg)</option>
+              <option value="g">Gram (g)</option>
+              <option value="l">Liter (l)</option>
+              <option value="ml">Milliliter (ml)</option>
+              <option value="pcs">Pieces (pcs)</option>
+              <option value="dozen">Dozen</option>
+            </select>
+          </div>
 
-        <div className="form-group">
-          <label>
-            Cost per unit*:
+          <div className="form-group">
+            <label className="form-label" htmlFor="cost">Cost (₹)</label>
             <input
               type="number"
+              id="cost"
               name="cost"
+              className="form-input"
               value={newIngredient.cost}
               onChange={handleInputChange}
-              placeholder="Cost per unit"
+              placeholder="Enter cost per unit"
               step="0.01"
               min="0"
             />
-          </label>
-        </div>
+          </div>
 
-        <div className="form-group">
-          <label>
-            Supplier:
+          <div className="form-group">
+            <label className="form-label" htmlFor="supplier">Supplier</label>
             <input
               type="text"
+              id="supplier"
               name="supplier"
+              className="form-input"
               value={newIngredient.supplier}
               onChange={handleInputChange}
-              placeholder="Supplier name"
+              placeholder="Enter supplier name (optional)"
             />
-          </label>
+          </div>
         </div>
 
-        <div className="form-group">
-          <label>
-            Minimum Order Quantity:
-            <input
-              type="number"
-              name="minQuantity"
-              value={newIngredient.minQuantity}
-              onChange={handleInputChange}
-              placeholder="Minimum quantity"
-              step="0.01"
-              min="0"
-            />
-          </label>
-        </div>
+        {error && <p className="error-message text-error mb-3">{error}</p>}
 
-        <button type="submit" className="submit-button">Add Ingredient</button>
+        <button type="submit" className="btn btn-success">
+          Add Ingredient
+        </button>
       </form>
 
-      <div className="ingredients-list">
-        <h3>Current Ingredients</h3>
-        <table>
+      <div className="table-container">
+        <table className="modern-table">
           <thead>
             <tr>
               <th>Name</th>
               <th>Unit</th>
-              <th>Cost/Unit</th>
+              <th>Cost (₹)</th>
               <th>Supplier</th>
-              <th>Min Quantity</th>
-              <th>Actions</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {ingredients.map((ingredient) => (
-              <tr key={ingredient._id}>
+            {ingredients.map(ingredient => (
+              <tr key={ingredient.id} className="fade-in">
                 <td>{ingredient.name}</td>
                 <td>{ingredient.unit}</td>
-                <td>${ingredient.cost.toFixed(2)}</td>
+                <td>₹{ingredient.cost.toFixed(2)}</td>
                 <td>{ingredient.supplier || '-'}</td>
-                <td>{ingredient.minQuantity || '-'}</td>
                 <td>
-                  <button 
-                    onClick={() => handleDelete(ingredient._id)}
-                    className="delete-button"
+                  <button
+                    onClick={() => handleDelete(ingredient.id)}
+                    className="btn btn-danger"
                   >
                     Delete
                   </button>
                 </td>
               </tr>
             ))}
+            {ingredients.length === 0 && (
+              <tr>
+                <td colSpan="5" className="text-center text-secondary">
+                  No ingredients added yet
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
-}
+};
 
 export default IngredientsManager;

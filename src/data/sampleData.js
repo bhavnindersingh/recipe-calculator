@@ -1,45 +1,75 @@
+export const RECIPE_CATEGORIES = ['Drinks Bar', 'Hot Food', 'Bakery'];
+
 export const sampleIngredients = [
   {
     id: 1,
     name: 'Coffee Beans (Arabica)',
-    costPerUnit: 800, // Cost per kg
+    cost: 800,
     unit: 'kg',
-    stock: 10
+    supplier: 'Premium Coffee Co.'
   },
   {
     id: 2,
     name: 'Milk',
-    costPerUnit: 60, // Cost per liter
+    cost: 60,
     unit: 'liter',
-    stock: 50
+    supplier: 'Local Dairy'
   },
   {
     id: 3,
     name: 'Sugar',
-    costPerUnit: 40, // Cost per kg
+    cost: 40,
     unit: 'kg',
-    stock: 25
+    supplier: 'Sweet Supplies Ltd'
   },
   {
     id: 4,
     name: 'Chocolate Syrup',
-    costPerUnit: 200, // Cost per liter
+    cost: 200,
     unit: 'liter',
-    stock: 5
+    supplier: 'Dessert Essentials'
   },
   {
     id: 5,
     name: 'Whipped Cream',
-    costPerUnit: 150, // Cost per liter
+    cost: 150,
     unit: 'liter',
-    stock: 3
+    supplier: 'Dairy Delights'
   },
   {
     id: 6,
     name: 'Caramel Syrup',
-    costPerUnit: 180, // Cost per liter
+    cost: 180,
     unit: 'liter',
-    stock: 4
+    supplier: 'Sweet Syrups Inc'
+  },
+  {
+    id: 7,
+    name: 'All-Purpose Flour',
+    cost: 45,
+    unit: 'kg',
+    supplier: 'Baking Essentials'
+  },
+  {
+    id: 8,
+    name: 'Butter',
+    cost: 400,
+    unit: 'kg',
+    supplier: 'Dairy Delights'
+  },
+  {
+    id: 9,
+    name: 'Chicken',
+    cost: 280,
+    unit: 'kg',
+    supplier: 'Fresh Meats'
+  },
+  {
+    id: 10,
+    name: 'Rice',
+    cost: 80,
+    unit: 'kg',
+    supplier: 'Grain Traders'
   }
 ];
 
@@ -47,43 +77,124 @@ export const sampleRecipes = [
   {
     id: 1,
     name: 'Classic Cappuccino',
+    category: RECIPE_CATEGORIES[0],
+    description: 'Classic Italian coffee drink with equal parts espresso, steamed milk, and milk foam',
     ingredients: [
-      { ingredientId: 1, quantity: 0.018 }, // 18g coffee
-      { ingredientId: 2, quantity: 0.18 }   // 180ml milk
+      {
+        id: 1,
+        name: 'Coffee Beans (Arabica)',
+        cost: 800,
+        unit: 'kg',
+        quantity: 0.018
+      },
+      {
+        id: 2,
+        name: 'Milk',
+        cost: 60,
+        unit: 'liter',
+        quantity: 0.180
+      }
     ],
-    sellingPrice: 180,
-    averageMonthlySales: 450
+    sellingPrice: 150,
+    totalCost: 25.2,
+    profit: 124.8,
+    profitMargin: 83.2,
+    averageMonthlySales: 300,
+    monthlyRevenue: 45000,
+    monthlyProfit: 37440
   },
   {
     id: 2,
-    name: 'Caramel Macchiato',
+    name: 'Caramel Latte',
+    category: RECIPE_CATEGORIES[0],
+    description: 'Rich espresso with steamed milk and caramel syrup, topped with caramel drizzle',
     ingredients: [
-      { ingredientId: 1, quantity: 0.018 }, // 18g coffee
-      { ingredientId: 2, quantity: 0.15 },  // 150ml milk
-      { ingredientId: 6, quantity: 0.03 }   // 30ml caramel
+      {
+        id: 1,
+        name: 'Coffee Beans (Arabica)',
+        cost: 800,
+        unit: 'kg',
+        quantity: 0.018
+      },
+      {
+        id: 2,
+        name: 'Milk',
+        cost: 60,
+        unit: 'liter',
+        quantity: 0.200
+      },
+      {
+        id: 6,
+        name: 'Caramel Syrup',
+        cost: 180,
+        unit: 'liter',
+        quantity: 0.030
+      }
     ],
-    sellingPrice: 220,
-    averageMonthlySales: 300
+    sellingPrice: 180,
+    totalCost: 31.8,
+    profit: 148.2,
+    profitMargin: 82.3,
+    averageMonthlySales: 200,
+    monthlyRevenue: 36000,
+    monthlyProfit: 29640
   },
   {
     id: 3,
-    name: 'Mocha',
+    name: 'Chocolate Croissant',
+    category: RECIPE_CATEGORIES[2],
+    description: 'Buttery, flaky croissant filled with rich chocolate',
     ingredients: [
-      { ingredientId: 1, quantity: 0.018 }, // 18g coffee
-      { ingredientId: 2, quantity: 0.15 },  // 150ml milk
-      { ingredientId: 4, quantity: 0.03 },  // 30ml chocolate
-      { ingredientId: 5, quantity: 0.02 }   // 20ml whipped cream
+      {
+        id: 7,
+        name: 'All-Purpose Flour',
+        cost: 45,
+        unit: 'kg',
+        quantity: 0.1
+      },
+      {
+        id: 8,
+        name: 'Butter',
+        cost: 400,
+        unit: 'kg',
+        quantity: 0.08
+      }
     ],
-    sellingPrice: 240,
-    averageMonthlySales: 250
+    sellingPrice: 90,
+    totalCost: 36.5,
+    profit: 53.5,
+    profitMargin: 59.4,
+    averageMonthlySales: 400,
+    monthlyRevenue: 36000,
+    monthlyProfit: 21400
   },
   {
     id: 4,
-    name: 'Espresso',
+    name: 'Chicken Biryani',
+    category: RECIPE_CATEGORIES[1],
+    description: 'Fragrant rice dish with tender chicken and aromatic spices',
     ingredients: [
-      { ingredientId: 1, quantity: 0.018 }  // 18g coffee
+      {
+        id: 9,
+        name: 'Chicken',
+        cost: 280,
+        unit: 'kg',
+        quantity: 0.2
+      },
+      {
+        id: 10,
+        name: 'Rice',
+        cost: 80,
+        unit: 'kg',
+        quantity: 0.15
+      }
     ],
-    sellingPrice: 120,
-    averageMonthlySales: 200
+    sellingPrice: 200,
+    totalCost: 68,
+    profit: 132,
+    profitMargin: 66,
+    averageMonthlySales: 250,
+    monthlyRevenue: 50000,
+    monthlyProfit: 33000
   }
 ];
