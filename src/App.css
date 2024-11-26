@@ -1,51 +1,140 @@
 .App {
   text-align: center;
-  min-height: 100vh;
-  background-color: #f5f5f5;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 .App-header {
   background-color: #2c3e50;
-  padding: 2rem;
+  padding: 20px;
   color: white;
-  margin-bottom: 2rem;
+  margin-bottom: 30px;
+  border-radius: 8px;
 }
 
 .App-header h1 {
   margin: 0;
-  font-size: 2rem;
-  margin-bottom: 1.5rem;
+  font-size: 2em;
 }
 
-.nav-tabs {
+.tabs {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #e0e0e0;
 }
 
-.nav-tabs button {
-  background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
+.tab-button {
+  background: none;
+  border: none;
+  padding: 15px 30px;
+  font-size: 1.1em;
   cursor: pointer;
-  font-size: 1rem;
+  position: relative;
+  color: #666;
   transition: all 0.3s ease;
 }
 
-.nav-tabs button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.nav-tabs button.active {
-  background-color: white;
+.tab-button:hover {
   color: #2c3e50;
-  border-color: white;
 }
 
-main {
-  max-width: 1200px;
+.tab-button.active {
+  color: #2c3e50;
+  font-weight: bold;
+}
+
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #2c3e50;
+}
+
+.tab-content {
+  padding: 20px;
+}
+
+.tab-pane {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-pane h2 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 1.2em;
+  color: #666;
+}
+
+.error {
+  text-align: center;
+  padding: 20px;
+  color: #e74c3c;
+  background-color: #fde8e7;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+/* Form Styles */
+form {
+  max-width: 600px;
   margin: 0 auto;
-  padding: 0 1rem;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+button {
+  background-color: #2c3e50;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #34495e;
+}
+
+/* Table Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #f5f6fa;
+  color: #2c3e50;
+}
+
+tr:hover {
+  background-color: #f8f9fa;
 }

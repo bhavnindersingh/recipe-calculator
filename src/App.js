@@ -50,59 +50,68 @@ function App() {
     }
   };
 
-  if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
+  if (loading) return <div className="loading">Loading...</div>;
+  if (error) return <div className="error">{error}</div>;
 
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Recipe Calculator & Profitability Analytics</h1>
-        <nav className="nav-tabs">
-          <button 
-            className={activeTab === 'ingredients' ? 'active' : ''} 
-            onClick={() => setActiveTab('ingredients')}
-          >
-            Ingredients
-          </button>
-          <button 
-            className={activeTab === 'recipes' ? 'active' : ''} 
-            onClick={() => setActiveTab('recipes')}
-          >
-            Recipes
-          </button>
-          <button 
-            className={activeTab === 'analysis' ? 'active' : ''} 
-            onClick={() => setActiveTab('analysis')}
-          >
-            Profitability Analysis
-          </button>
-        </nav>
+        <h1>Conscious Cafe Recipe Calculator & MRP Analysis</h1>
       </header>
-      <main>
+      
+      <div className="tabs">
+        <button 
+          className={`tab-button ${activeTab === 'ingredients' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ingredients')}
+        >
+          Ingredients
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'recipes' ? 'active' : ''}`}
+          onClick={() => setActiveTab('recipes')}
+        >
+          Recipes
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analysis')}
+        >
+          Profitability Analysis
+        </button>
+      </div>
+
+      <div className="tab-content">
         {activeTab === 'ingredients' && (
-          <IngredientsManager 
-            onIngredientAdd={handleAddIngredient}
-            ingredients={ingredients}
-          />
+          <div className="tab-pane">
+            <h2>Ingredients Management</h2>
+            <IngredientsManager 
+              ingredients={ingredients} 
+              onAddIngredient={handleAddIngredient}
+            />
+          </div>
         )}
+        
         {activeTab === 'recipes' && (
-          <>
+          <div className="tab-pane">
+            <h2>Recipe Management</h2>
             <RecipeForm 
-              onSaveRecipe={handleSaveRecipe}
-              availableIngredients={ingredients}
+              ingredients={ingredients} 
+              onSave={handleSaveRecipe}
             />
             <RecipeList recipes={recipes} />
-          </>
+          </div>
         )}
+        
         {activeTab === 'analysis' && (
-          <ProfitabilityAnalysis recipes={recipes} />
+          <div className="tab-pane">
+            <h2>Profitability Analysis</h2>
+            <ProfitabilityAnalysis 
+              recipes={recipes}
+              ingredients={ingredients}
+            />
+          </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
