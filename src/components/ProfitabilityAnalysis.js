@@ -1,19 +1,59 @@
 import React, { useState } from 'react';
 import '../styles/ProfitabilityAnalysis.css';
 
-function ProfitabilityAnalysis({ recipes }) {
+function ProfitabilityAnalysis({ recipes, ingredients }) {
   const [sortField, setSortField] = useState('margin');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
 
-  const calculateMetrics = (recipe) => {
-    const profit = recipe.sellingPrice - recipe.totalCost;
-    const margin = (profit / recipe.sellingPrice) * 100;
-    const roi = (profit / recipe.totalCost) * 100;
+  const calculateCOGS = (recipe) => {
+    // Calculate raw material cost
+    const ingredientCost = recipe.ingredients.reduce((total, item) => {
+      const ingredient = ingredients.find(ing => ing.id === item.ingredientId);
+      return total + (ingredient ? (ingredient.costPerUnit * item.quantity) : 0);
+    }, 0);
+
+    // Add labor cost (estimated 30% of ingredient cost)
+    const laborCost = ingredientCost * 0.3;
+
+    // Add overhead cost (estimated 20% of ingredient cost)
+    const overheadCost = ingredientCost * 0.2;
+
+    // Calculate total COGS
+    const totalCOGS = ingredientCost + laborCost + overheadCost;
 
     return {
+      ingredientCost,
+      laborCost,
+      overheadCost,
+      totalCOGS
+    };
+  };
+
+  const calculateMetrics = (recipe) => {
+    const cogs = calculateCOGS(recipe);
+    const totalCost = cogs.totalCOGS;
+    
+    // Recommended selling price calculation
+    const targetMargin = 0.65; // 65% target margin
+    const recommendedPrice = totalCost / (1 - targetMargin);
+    
+    // Actual metrics
+    const actualPrice = recipe.sellingPrice || recommendedPrice;
+    const profit = actualPrice - totalCost;
+    const margin = (profit / actualPrice) * 100;
+    const roi = (profit / totalCost) * 100;
+    const markupPercentage = ((actualPrice - totalCost) / totalCost) * 100;
+
+    return {
+      ...cogs,
+      totalCost,
+      recommendedPrice,
+      actualPrice,
       profit,
       margin,
-      roi
+      roi,
+      markupPercentage
     };
   };
 
@@ -30,8 +70,8 @@ function ProfitabilityAnalysis({ recipes }) {
             : bValue.localeCompare(aValue);
 
         case 'totalCost':
-          aValue = a.totalCost;
-          bValue = b.totalCost;
+          aValue = calculateMetrics(a).totalCost;
+          bValue = calculateMetrics(b).totalCost;
           break;
 
         case 'sellingPrice':
@@ -78,6 +118,14 @@ function ProfitabilityAnalysis({ recipes }) {
     return '';
   };
 
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2
+    }).format(value);
+  };
+
   const sortedRecipes = sortRecipes(recipes);
 
   if (recipes.length === 0) {
@@ -91,88 +139,123 @@ function ProfitabilityAnalysis({ recipes }) {
 
   return (
     <div className="profitability-analysis">
-      <h2>Profitability Analysis</h2>
-
-      <div className="summary-metrics">
-        <div className="metric-card">
-          <h3>Average Profit Margin</h3>
-          <p>
-            {(sortedRecipes.reduce((sum, recipe) => 
-              sum + calculateMetrics(recipe).margin, 0) / sortedRecipes.length).toFixed(1)}%
-          </p>
-        </div>
-        <div className="metric-card">
-          <h3>Average ROI</h3>
-          <p>
-            {(sortedRecipes.reduce((sum, recipe) => 
-              sum + calculateMetrics(recipe).roi, 0) / sortedRecipes.length).toFixed(1)}%
-          </p>
-        </div>
-        <div className="metric-card">
-          <h3>Total Revenue</h3>
-          <p>
-            ${sortedRecipes.reduce((sum, recipe) => 
-              sum + recipe.sellingPrice, 0).toFixed(2)}
-          </p>
+      <div className="analysis-header">
+        <h2>Profitability Analysis</h2>
+        <div className="summary-metrics">
+          <div className="metric-card">
+            <h3>Average Profit Margin</h3>
+            <p className="metric-value">
+              {(sortedRecipes.reduce((sum, recipe) => 
+                sum + calculateMetrics(recipe).margin, 0) / sortedRecipes.length).toFixed(1)}%
+            </p>
+          </div>
+          <div className="metric-card">
+            <h3>Average ROI</h3>
+            <p className="metric-value">
+              {(sortedRecipes.reduce((sum, recipe) => 
+                sum + calculateMetrics(recipe).roi, 0) / sortedRecipes.length).toFixed(1)}%
+            </p>
+          </div>
+          <div className="metric-card">
+            <h3>Total Monthly Revenue</h3>
+            <p className="metric-value">
+              {formatCurrency(sortedRecipes.reduce((sum, recipe) => 
+                sum + (recipe.sellingPrice * (recipe.averageMonthlySales || 0)), 0))}
+            </p>
+          </div>
         </div>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th onClick={() => handleSort('name')}>
-              Recipe Name{getSortIndicator('name')}
-            </th>
-            <th onClick={() => handleSort('totalCost')}>
-              Cost{getSortIndicator('totalCost')}
-            </th>
-            <th onClick={() => handleSort('sellingPrice')}>
-              Price{getSortIndicator('sellingPrice')}
-            </th>
-            <th onClick={() => handleSort('profit')}>
-              Profit{getSortIndicator('profit')}
-            </th>
-            <th onClick={() => handleSort('margin')}>
-              Margin{getSortIndicator('margin')}
-            </th>
-            <th onClick={() => handleSort('roi')}>
-              ROI{getSortIndicator('roi')}
-            </th>
-            <th>Ingredient Breakdown</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedRecipes.map((recipe) => {
-            const metrics = calculateMetrics(recipe);
-            
-            return (
-              <tr key={recipe._id}>
-                <td>{recipe.name}</td>
-                <td>${recipe.totalCost.toFixed(2)}</td>
-                <td>${recipe.sellingPrice.toFixed(2)}</td>
-                <td>${metrics.profit.toFixed(2)}</td>
-                <td>{metrics.margin.toFixed(1)}%</td>
-                <td>{metrics.roi.toFixed(1)}%</td>
-                <td>
-                  <ul className="ingredient-breakdown">
-                    {recipe.ingredients.map((item, index) => {
-                      const ingredient = item.ingredientId;
-                      const cost = ingredient.cost * item.quantity;
-                      const percentage = (cost / recipe.totalCost * 100).toFixed(1);
-                      
-                      return (
-                        <li key={index}>
-                          {ingredient.name}: ${cost.toFixed(2)} ({percentage}%)
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </td>
+      <div className="analysis-content">
+        <div className="recipes-table">
+          <table>
+            <thead>
+              <tr>
+                <th onClick={() => handleSort('name')}>
+                  Recipe Name{getSortIndicator('name')}
+                </th>
+                <th onClick={() => handleSort('totalCost')}>
+                  COGS{getSortIndicator('totalCost')}
+                </th>
+                <th onClick={() => handleSort('sellingPrice')}>
+                  Selling Price{getSortIndicator('sellingPrice')}
+                </th>
+                <th onClick={() => handleSort('profit')}>
+                  Profit{getSortIndicator('profit')}
+                </th>
+                <th onClick={() => handleSort('margin')}>
+                  Margin{getSortIndicator('margin')}
+                </th>
+                <th onClick={() => handleSort('roi')}>
+                  ROI{getSortIndicator('roi')}
+                </th>
+                <th>Actions</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {sortedRecipes.map(recipe => {
+                const metrics = calculateMetrics(recipe);
+                return (
+                  <tr key={recipe.id} className={selectedRecipe?.id === recipe.id ? 'selected' : ''}>
+                    <td>{recipe.name}</td>
+                    <td>{formatCurrency(metrics.totalCOGS)}</td>
+                    <td>{formatCurrency(recipe.sellingPrice)}</td>
+                    <td>{formatCurrency(metrics.profit)}</td>
+                    <td>{metrics.margin.toFixed(1)}%</td>
+                    <td>{metrics.roi.toFixed(1)}%</td>
+                    <td>
+                      <button 
+                        className="detail-button"
+                        onClick={() => setSelectedRecipe(recipe)}
+                      >
+                        Details
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {selectedRecipe && (
+          <div className="recipe-detail-card">
+            <h3>{selectedRecipe.name} - Detailed Analysis</h3>
+            <div className="cost-breakdown">
+              <h4>Cost Breakdown</h4>
+              {Object.entries(calculateCOGS(selectedRecipe)).map(([key, value]) => (
+                <div key={key} className="cost-item">
+                  <span>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+                  <span>{formatCurrency(value)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="pricing-analysis">
+              <h4>Pricing Analysis</h4>
+              <div className="price-metrics">
+                <div className="metric">
+                  <span>Recommended Price</span>
+                  <span>{formatCurrency(calculateMetrics(selectedRecipe).recommendedPrice)}</span>
+                </div>
+                <div className="metric">
+                  <span>Current Price</span>
+                  <span>{formatCurrency(selectedRecipe.sellingPrice)}</span>
+                </div>
+                <div className="metric">
+                  <span>Markup Percentage</span>
+                  <span>{calculateMetrics(selectedRecipe).markupPercentage.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+            <button 
+              className="close-detail"
+              onClick={() => setSelectedRecipe(null)}
+            >
+              Close Details
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

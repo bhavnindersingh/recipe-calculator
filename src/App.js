@@ -1,117 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import './App.css';
+import IngredientsManager from './components/IngredientsManager';
 import RecipeForm from './components/RecipeForm';
 import RecipeList from './components/RecipeList';
-import IngredientsManager from './components/IngredientsManager';
 import ProfitabilityAnalysis from './components/ProfitabilityAnalysis';
-import { api } from './services/api';
-import './App.css';
+import { sampleIngredients, sampleRecipes } from './data/sampleData';
 
 function App() {
   const [activeTab, setActiveTab] = useState('ingredients');
-  const [ingredients, setIngredients] = useState([]);
-  const [recipes, setRecipes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [ingredients, setIngredients] = useState(sampleIngredients);
+  const [recipes, setRecipes] = useState(sampleRecipes);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [ingredientsData, recipesData] = await Promise.all([
-          api.getIngredients(),
-          api.getRecipes()
-        ]);
-        setIngredients(ingredientsData);
-        setRecipes(recipesData);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to fetch data. Please try again later.');
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleSaveRecipe = async (recipe) => {
-    try {
-      const newRecipe = await api.addRecipe(recipe);
-      setRecipes([...recipes, newRecipe]);
-    } catch (err) {
-      setError('Failed to save recipe. Please try again.');
-    }
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
   };
-
-  const handleAddIngredient = async (ingredient) => {
-    try {
-      const newIngredient = await api.addIngredient(ingredient);
-      setIngredients([...ingredients, newIngredient]);
-    } catch (err) {
-      setError('Failed to add ingredient. Please try again.');
-    }
-  };
-
-  if (loading) return <div className="loading">Loading...</div>;
-  if (error) return <div className="error">{error}</div>;
 
   return (
-    <div className="App">
-      <header className="App-header">
+    <div className="app">
+      <header className="app-header">
         <h1>Conscious Cafe Recipe Calculator & MRP Analysis</h1>
+        <div className="tab-container">
+          <button
+            className={`tab-button ${activeTab === 'ingredients' ? 'active' : ''}`}
+            onClick={() => handleTabChange('ingredients')}
+          >
+            Ingredients
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'recipes' ? 'active' : ''}`}
+            onClick={() => handleTabChange('recipes')}
+          >
+            Recipes
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
+            onClick={() => handleTabChange('analysis')}
+          >
+            Profitability Analysis
+          </button>
+        </div>
       </header>
-      
-      <div className="tabs">
-        <button 
-          className={`tab-button ${activeTab === 'ingredients' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ingredients')}
-        >
-          Ingredients
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'recipes' ? 'active' : ''}`}
-          onClick={() => setActiveTab('recipes')}
-        >
-          Recipes
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
-          onClick={() => setActiveTab('analysis')}
-        >
-          Profitability Analysis
-        </button>
-      </div>
 
-      <div className="tab-content">
+      <main className="app-content">
         {activeTab === 'ingredients' && (
-          <div className="tab-pane">
-            <h2>Ingredients Management</h2>
-            <IngredientsManager 
-              ingredients={ingredients} 
-              onAddIngredient={handleAddIngredient}
-            />
-          </div>
+          <IngredientsManager 
+            ingredients={ingredients}
+            setIngredients={setIngredients}
+          />
         )}
-        
         {activeTab === 'recipes' && (
-          <div className="tab-pane">
-            <h2>Recipe Management</h2>
-            <RecipeForm 
-              ingredients={ingredients} 
-              onSave={handleSaveRecipe}
-            />
-            <RecipeList recipes={recipes} />
-          </div>
-        )}
-        
-        {activeTab === 'analysis' && (
-          <div className="tab-pane">
-            <h2>Profitability Analysis</h2>
-            <ProfitabilityAnalysis 
+          <div className="recipes-container">
+            <RecipeForm
+              ingredients={ingredients}
               recipes={recipes}
+              setRecipes={setRecipes}
+            />
+            <RecipeList
+              recipes={recipes}
+              setRecipes={setRecipes}
               ingredients={ingredients}
             />
           </div>
         )}
-      </div>
+        {activeTab === 'analysis' && (
+          <ProfitabilityAnalysis
+            recipes={recipes}
+            ingredients={ingredients}
+          />
+        )}
+      </main>
     </div>
   );
 }
