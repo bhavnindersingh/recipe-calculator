@@ -1,41 +1,59 @@
 import React, { useState } from 'react';
 import '../styles/RecipeForm.css';
 
-const RecipeForm = ({ onSaveRecipe }) => {
+const RecipeForm = ({ onSaveRecipe, availableIngredients }) => {
   const [recipeName, setRecipeName] = useState('');
-  const [ingredients, setIngredients] = useState([{ name: '', quantity: '', cost: '' }]);
+  const [sellingPrice, setSellingPrice] = useState('');
+  const [selectedIngredients, setSelectedIngredients] = useState([{ ingredientId: '', quantity: '' }]);
 
   const handleAddIngredient = () => {
-    setIngredients([...ingredients, { name: '', quantity: '', cost: '' }]);
+    setSelectedIngredients([...selectedIngredients, { ingredientId: '', quantity: '' }]);
   };
 
   const handleIngredientChange = (index, field, value) => {
-    const newIngredients = [...ingredients];
+    const newIngredients = [...selectedIngredients];
     newIngredients[index][field] = value;
-    setIngredients(newIngredients);
+    setSelectedIngredients(newIngredients);
   };
 
   const calculateTotalCost = () => {
-    return ingredients.reduce((total, ing) => total + (parseFloat(ing.cost) || 0), 0);
+    return selectedIngredients.reduce((total, selected) => {
+      const ingredient = availableIngredients.find(i => i.id === selected.ingredientId);
+      if (ingredient && selected.quantity) {
+        return total + (parseFloat(ingredient.cost) * parseFloat(selected.quantity));
+      }
+      return total;
+    }, 0);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const totalCost = calculateTotalCost();
+    const recipeIngredients = selectedIngredients.map(selected => {
+      const ingredient = availableIngredients.find(i => i.id === selected.ingredientId);
+      return {
+        ...ingredient,
+        quantity: selected.quantity
+      };
+    });
+
     const recipe = {
+      id: Date.now(),
       name: recipeName,
-      ingredients,
-      totalCost,
+      ingredients: recipeIngredients,
+      totalCost: calculateTotalCost(),
+      sellingPrice,
       timestamp: new Date().toISOString(),
     };
+
     onSaveRecipe(recipe);
     setRecipeName('');
-    setIngredients([{ name: '', quantity: '', cost: '' }]);
+    setSellingPrice('');
+    setSelectedIngredients([{ ingredientId: '', quantity: '' }]);
   };
 
   return (
     <div className="recipe-form">
-      <h2>Add New Recipe</h2>
+      <h2>Create New Recipe</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Recipe Name:</label>
@@ -47,27 +65,38 @@ const RecipeForm = ({ onSaveRecipe }) => {
           />
         </div>
 
-        {ingredients.map((ingredient, index) => (
+        <div className="form-group">
+          <label>Selling Price (MRP):</label>
+          <input
+            type="number"
+            step="0.01"
+            value={sellingPrice}
+            onChange={(e) => setSellingPrice(e.target.value)}
+            required
+          />
+        </div>
+
+        <h3>Ingredients</h3>
+        {selectedIngredients.map((selected, index) => (
           <div key={index} className="ingredient-row">
-            <input
-              type="text"
-              placeholder="Ingredient name"
-              value={ingredient.name}
-              onChange={(e) => handleIngredientChange(index, 'name', e.target.value)}
+            <select
+              value={selected.ingredientId}
+              onChange={(e) => handleIngredientChange(index, 'ingredientId', e.target.value)}
               required
-            />
-            <input
-              type="text"
-              placeholder="Quantity"
-              value={ingredient.quantity}
-              onChange={(e) => handleIngredientChange(index, 'quantity', e.target.value)}
-              required
-            />
+            >
+              <option value="">Select Ingredient</option>
+              {availableIngredients.map(ingredient => (
+                <option key={ingredient.id} value={ingredient.id}>
+                  {ingredient.name} (${ingredient.cost}/{ingredient.unit})
+                </option>
+              ))}
+            </select>
             <input
               type="number"
-              placeholder="Cost"
-              value={ingredient.cost}
-              onChange={(e) => handleIngredientChange(index, 'cost', e.target.value)}
+              step="0.01"
+              placeholder="Quantity"
+              value={selected.quantity}
+              onChange={(e) => handleIngredientChange(index, 'quantity', e.target.value)}
               required
             />
           </div>
