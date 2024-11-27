@@ -36,6 +36,51 @@ function App() {
     localStorage.setItem('recipes', JSON.stringify(recipes));
   }, [recipes]);
 
+  // Function to generate a sync code for current data
+  const generateSyncCode = () => {
+    const data = {
+      ingredients,
+      recipes,
+      timestamp: new Date().toISOString()
+    };
+    const jsonString = JSON.stringify(data);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `recipe-sync-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Function to apply sync code
+  const applySyncCode = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.ingredients && data.recipes) {
+            setIngredients(data.ingredients);
+            setRecipes(data.recipes);
+            localStorage.setItem('ingredients', JSON.stringify(data.ingredients));
+            localStorage.setItem('recipes', JSON.stringify(data.recipes));
+            alert('Data synchronized successfully!');
+          } else {
+            alert('Invalid sync file format');
+          }
+        } catch (error) {
+          alert('Error synchronizing data: ' + error.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+    event.target.value = '';
+  };
+
   const handleEditRecipe = (recipe) => {
     setEditingRecipe(recipe);
     setActiveTab('form');
@@ -180,7 +225,6 @@ function App() {
       };
       reader.readAsArrayBuffer(file);
     }
-    // Reset file input
     event.target.value = '';
   };
 
@@ -248,6 +292,25 @@ function App() {
                 onClick={() => fileInputRef.current.click()}
               >
                 Import from Excel
+              </button>
+              <button 
+                className={`btn btn-info`}
+                onClick={generateSyncCode}
+              >
+                Sync to Mobile
+              </button>
+              <input
+                type="file"
+                id="syncInput"
+                style={{ display: 'none' }}
+                accept=".json"
+                onChange={applySyncCode}
+              />
+              <button 
+                className={`btn btn-info`}
+                onClick={() => document.getElementById('syncInput').click()}
+              >
+                Sync from Desktop
               </button>
             </div>
           </nav>
