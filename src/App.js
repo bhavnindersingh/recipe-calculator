@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, onValue, set } from 'firebase/database';
 import IngredientsManager from './components/IngredientsManager';
 import RecipeForm from './components/RecipeForm';
 import RecipeList from './components/RecipeList';
@@ -9,32 +11,73 @@ import * as XLSX from 'xlsx';
 import './styles/shared.css';
 import './styles/App.css';
 
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDEDJRkQDzVXv6WLXDOCwCj-E08yKKtE2s",
+  authDomain: "recipe-calculator-kavas.firebaseapp.com",
+  databaseURL: "https://recipe-calculator-kavas-default-rtdb.firebaseio.com",
+  projectId: "recipe-calculator-kavas",
+  storageBucket: "recipe-calculator-kavas.appspot.com",
+  messagingSenderId: "1098415716646",
+  appId: "1:1098415716646:web:e9b9f9b9f9b9f9b9f9b9f9"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
 function App() {
   const fileInputRef = useRef(null);
   
-  // Initialize state from localStorage or use sample data as fallback
-  const [ingredients, setIngredients] = useState(() => {
-    const savedIngredients = localStorage.getItem('ingredients');
-    return savedIngredients ? JSON.parse(savedIngredients) : sampleIngredients;
-  });
-
-  const [recipes, setRecipes] = useState(() => {
-    const savedRecipes = localStorage.getItem('recipes');
-    return savedRecipes ? JSON.parse(savedRecipes) : sampleRecipes;
-  });
-
+  // Initialize state from Firebase or use sample data as fallback
+  const [ingredients, setIngredients] = useState(sampleIngredients);
+  const [recipes, setRecipes] = useState(sampleRecipes);
   const [activeTab, setActiveTab] = useState('recipes');
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Save to localStorage whenever data changes
+  // Subscribe to Firebase data changes
   useEffect(() => {
-    localStorage.setItem('ingredients', JSON.stringify(ingredients));
-  }, [ingredients]);
+    if (isAuthenticated) {
+      const ingredientsRef = ref(database, 'ingredients');
+      const recipesRef = ref(database, 'recipes');
+
+      // Listen for ingredients changes
+      const unsubIngredients = onValue(ingredientsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          setIngredients(data);
+        }
+      });
+
+      // Listen for recipes changes
+      const unsubRecipes = onValue(recipesRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          setRecipes(data);
+        }
+      });
+
+      // Cleanup subscriptions
+      return () => {
+        unsubIngredients();
+        unsubRecipes();
+      };
+    }
+  }, [isAuthenticated]);
+
+  // Save to Firebase whenever data changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      set(ref(database, 'ingredients'), ingredients);
+    }
+  }, [ingredients, isAuthenticated]);
 
   useEffect(() => {
-    localStorage.setItem('recipes', JSON.stringify(recipes));
-  }, [recipes]);
+    if (isAuthenticated) {
+      set(ref(database, 'recipes'), recipes);
+    }
+  }, [recipes, isAuthenticated]);
 
   // Function to generate a sync code for current data
   const generateSyncCode = () => {
@@ -66,8 +109,8 @@ function App() {
           if (data.ingredients && data.recipes) {
             setIngredients(data.ingredients);
             setRecipes(data.recipes);
-            localStorage.setItem('ingredients', JSON.stringify(data.ingredients));
-            localStorage.setItem('recipes', JSON.stringify(data.recipes));
+            set(ref(database, 'ingredients'), data.ingredients);
+            set(ref(database, 'recipes'), data.recipes);
             alert('Data synchronized successfully!');
           } else {
             alert('Invalid sync file format');
@@ -181,6 +224,7 @@ function App() {
                 category: row['Category']
               }));
             setIngredients(importedIngredients);
+            set(ref(database, 'ingredients'), importedIngredients);
           }
 
           // Read recipes
@@ -215,6 +259,7 @@ function App() {
             });
 
             setRecipes(importedRecipes);
+            set(ref(database, 'recipes'), importedRecipes);
           }
 
           alert('Data imported successfully!');

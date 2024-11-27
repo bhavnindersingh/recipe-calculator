@@ -173,3 +173,4 @@ const IngredientsManager = ({ ingredients, setIngredients }) => {
 };
 
 export default IngredientsManager;
+Belgian Chocolate Croissant
